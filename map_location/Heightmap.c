@@ -55,7 +55,7 @@ char TrianglePos(point a, point b, point c, point loc)
 	double sum, eps;
 
 	sum = abd + adc + bdc;
-	eps = (abc / 100) * 0.0000000001;
+	eps = (abc / 100.0) * 0.0000000001;
 	//if (abc == abd + adc + bdc)
 	if (fabs(abd + adc + bdc - abc) < eps)
 		return 1;
@@ -157,8 +157,8 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 	unsigned int i,j;                     // Индексы навигации по узлам карты
 	point ThisPoint = {lon, lat, 0};      // Текущая геолокация
 	point NullPoint;                      // Нуль точка на карте (координаты левого нижнего угла карты)
-	unsigned short LonCount;                       // Количество узловых точек по долготе
-	unsigned short LatCount;                       // Количество узловых точек по долготе
+	unsigned short LonCount;              // Количество узловых точек по долготе
+	unsigned short LatCount;              // Количество узловых точек по долготе
 	double MapStepLon;                    // Масштаб по долготе (количество секунд в одном делении)
 	double MapStepLat;                    // Масштаб по широте (количество секунд в одном делении)
 	point A, B, C, D;                     // Вершины квадрата местоположения
@@ -213,7 +213,7 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 	if(mode == TRIANGULARTION)
 	{
 		// Ищем по долготе
-		for (i = 0; i < LonCount - 1; i++)
+		for (i = 0; i < LonCount; i++)
 		{
 			// Необходимо найти такой индекс i, при котором текущая геолокация будет лежать между i и i+1 шагом по долготе в сетке карты
 			if (NullPoint.lon < ThisPoint.lon && (NullPoint.lon + MapStepLon) > ThisPoint.lon)
@@ -226,7 +226,7 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 			else NullPoint.lon += MapStepLon;
 		}
 		// Ищем по широте
-		for (j = 0; j < LatCount - 1; j++)
+		for (j = 0; j < LatCount; j++)
 		{
 			// Необходимо найти такой индекс j, при котором текущая геолокация будет лежать между j и j+1 шагом по широте в сетке карты
 			if (NullPoint.lat < ThisPoint.lat && (NullPoint.lat + MapStepLat) > ThisPoint.lat)
@@ -241,7 +241,7 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 		// Тогда необходимо проверить флаги выхода за пределы карты, если они не были сброшены, значит мы вне карты
 		// И высоту рельефа узнать не можем, поэтому возвращаем некорректное значение и выходим
 		if (OutRangeLat || OutRangeLon)
-			return 0xFF;
+			return 0xFFFF;
 
 		// Теперь необходимо узнать координаты всех 4 точек образующих квадрат
 		// Зная индексы от нуль точки и шаг сетки, это сделать легко:
@@ -305,7 +305,7 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 		// Тогда необходимо проверить флаги выхода за пределы карты, если они не были сброшены, значит мы вне карты
 		// И высоту рельефа узнать не можем, поэтому возвращаем некорректное значение и выходим
 		if (OutRangeLat || OutRangeLon)
-			return 0xFF;
+			return 0xFFFF;
 
 
 		// Здесь наконец второй и третий методы расходятся
