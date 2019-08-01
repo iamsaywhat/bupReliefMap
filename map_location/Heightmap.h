@@ -150,16 +150,16 @@ typedef struct {
 
 // Тип координат для целочисленных операций
 typedef struct {
-	unsigned int lon;       // Долгота x
-	unsigned int lat;       // Широта y
+	long long lon;       // Долгота x
+	long long lat;       // Широта y
 	unsigned short alt;     // Высота z
 }integer_point;
 
 // Режимы вычисления функции GetHeigh_OnThisPoint()
 typedef enum {
 	TRIANGULARTION,          // Метод триангуляции - высокая точность
-	MAX_APPROXIMATION,       // Оценка высоты по верхней границе - наименее точный, но быстрый и упреждающий
-	MED_APPROXIMATION        // Метод усреднения высот узловых точек - компромисное решение
+	UPPER_BOUND,             // Оценка высоты по верхней границе - наименее точный, но быстрый и упреждающий
+	AVERAGE                  // Метод усреднения высот узловых точек - компромисное решение
 } MAP_MODE;
 
 

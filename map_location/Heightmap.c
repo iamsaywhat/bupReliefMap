@@ -154,7 +154,7 @@ unsigned short MapHeight(point left_lower, point left_upper, point right_lower, 
 *********************************************************************************************************************/
 unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 {
-	unsigned int i,j;                     // Индексы навигации по узлам карты
+	unsigned short i,j;                     // Индексы навигации по узлам карты
 	point ThisPoint = {lon, lat, 0};      // Текущая геолокация
 	point NullPoint;                      // Нуль точка на карте (координаты левого нижнего угла карты)
 	unsigned short LonCount;              // Количество узловых точек по долготе
@@ -167,8 +167,8 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 
 	// Дополнительные переменные для поддержки грубых целочисленных режимов работы 
 	integer_point _NullPoint;            // Нуль точка на карте (координаты левого нижнего угла карты)
-	unsigned int  _MapStepLon;           // Масштаб по долготе (количество секунд в одном делении)
-	unsigned int  _MapStepLat;           // Масштаб по широте (количество секунд в одном делении)
+	long long  _MapStepLon;           // Масштаб по долготе (количество секунд в одном делении)
+	long long  _MapStepLat;           // Масштаб по широте (количество секунд в одном делении)
 	integer_point _ThisPoint;            // Текущая геолокация
 
 
@@ -212,11 +212,11 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 	// Первый метод наиболее точный - триангуляция
 	if(mode == TRIANGULARTION)
 	{
-		// Ищем по долготе
-		for (i = 0; i < LonCount; i++)
+		// Ищем по долготе (LonCount - 1 потому что индексы от 0 до 399, но 399 - крайний индекс, за его пределами карта отсутствует)
+		for (i = 0; i < LonCount-1; i++)
 		{
 			// Необходимо найти такой индекс i, при котором текущая геолокация будет лежать между i и i+1 шагом по долготе в сетке карты
-			if (NullPoint.lon < ThisPoint.lon && (NullPoint.lon + MapStepLon) > ThisPoint.lon)
+			if (NullPoint.lon <= ThisPoint.lon && (NullPoint.lon + MapStepLon) >= ThisPoint.lon)
 			{
 				// Сбрасываем флаг выхода за пределы загруженой карты
 				OutRangeLon = 0;
@@ -225,11 +225,11 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 
 			else NullPoint.lon += MapStepLon;
 		}
-		// Ищем по широте
-		for (j = 0; j < LatCount; j++)
+		// Ищем по широте (LatCount - 1 потому что индексы от 0 до 399, но 399 - крайний индекс, за его пределами карта отсутствует)
+		for (j = 0; j < LatCount-1; j++)
 		{
 			// Необходимо найти такой индекс j, при котором текущая геолокация будет лежать между j и j+1 шагом по широте в сетке карты
-			if (NullPoint.lat < ThisPoint.lat && (NullPoint.lat + MapStepLat) > ThisPoint.lat)
+			if (NullPoint.lat <= ThisPoint.lat && (NullPoint.lat + MapStepLat) >= ThisPoint.lat)
 			{
 				// Сбрасываем флаг выхода за пределы загруженой карты
 				OutRangeLat = 0;
@@ -257,30 +257,31 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 		B.lat = NullPoint.lat + MapStepLat;
 
 		// Теперь необходимо узнать высоты, зная индексы точек, можно это сделать
-		C.alt = GetMapProperties_Alt(i, j);
-		A.alt = GetMapProperties_Alt(i, j + 1);
-		B.alt = GetMapProperties_Alt(i + 1, j + 1);
-		D.alt = GetMapProperties_Alt(i + 1, j);
+		C.alt = (double)GetMapProperties_Alt(i, j);
+		A.alt = (double)GetMapProperties_Alt(i, j + 1);
+		B.alt = (double)GetMapProperties_Alt(i + 1, j + 1);
+		D.alt = (double)GetMapProperties_Alt(i + 1, j);
 
 		// Данные подготовлены, теперь узнаем высоту в точке нашей геолокациии методом триангуляции, и сразу же вернём значение
 		return  MapHeight(C, A, D, B, ThisPoint);
 	}
 	// Второй и третий метод имеют одинаковое начало
-	else if (mode == MED_APPROXIMATION || mode == MAX_APPROXIMATION)
+	else if (mode == AVERAGE || mode == UPPER_BOUND)
 	{
 		// Осуществляем переход на целочисленный формат вычислений с точностью до 7 знаков после запятой
-		_NullPoint.lon = (unsigned int)(NullPoint.lon * 10000000 + 0.5);
-		_NullPoint.lat = (unsigned int)(NullPoint.lat * 10000000 + 0.5);
-		_MapStepLon = (unsigned int)(MapStepLon * 10000000 + 0.5);
-		_MapStepLat = (unsigned int)(MapStepLat * 10000000 + 0.5);
-		_ThisPoint.lon = (unsigned int)(ThisPoint.lon * 10000000 + 0.5);
-		_ThisPoint.lat = (unsigned int)(ThisPoint.lat * 10000000 + 0.5);
+		_NullPoint.lon = (long long)(NullPoint.lon * 10000000 + 0.5);
+		_NullPoint.lat = (long long)(NullPoint.lat * 10000000 + 0.5);
+		_MapStepLon = (long long)(MapStepLon * 10000000 + 0.5);
+		_MapStepLat = (long long)(MapStepLat * 10000000 + 0.5);
+		_ThisPoint.lon = (long long)(ThisPoint.lon * 10000000 + 0.5);
+		_ThisPoint.lat = (long long)(ThisPoint.lat * 10000000 + 0.5);
+		_ThisPoint.alt = 0;
 
-		// Ищем по долготе
+		// Ищем по долготе (LonCount - 1 потому что индексы от 0 до 399, но 399 - крайний индекс, за его пределами карта отсутствует)
 		for (i = 0; i < LonCount - 1; i++)
 		{
 			// Необходимо найти такой индекс i, при котором текущая геолокация будет лежать между i и i+1 шагом по долготе в сетке карты
-			if (_NullPoint.lon < _ThisPoint.lon && (_NullPoint.lon + _MapStepLon) > _ThisPoint.lon)
+			if (_NullPoint.lon <= _ThisPoint.lon && (_NullPoint.lon + _MapStepLon) >= _ThisPoint.lon)
 			{
 				// Сбрасываем флаг выхода за пределы загруженой карты
 				OutRangeLon = 0;
@@ -289,11 +290,11 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 
 			else _NullPoint.lon += _MapStepLon;
 		}
-		// Ищем по широте
+		// Ищем по широте (LatCount - 1 потому что индексы от 0 до 399, но 399 - крайний индекс, за его пределами карта отсутствует)
 		for (j = 0; j < LatCount - 1; j++)
 		{
 			// Необходимо найти такой индекс j, при котором текущая геолокация будет лежать между j и j+1 шагом по широте в сетке карты
-			if (_NullPoint.lat < _ThisPoint.lat && (_NullPoint.lat + _MapStepLat) > _ThisPoint.lat)
+			if (_NullPoint.lat <= _ThisPoint.lat && (_NullPoint.lat + _MapStepLat) >= _ThisPoint.lat)
 			{
 				// Сбрасываем флаг выхода за пределы загруженой карты
 				OutRangeLat = 0;
@@ -310,14 +311,14 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 
 		// Здесь наконец второй и третий методы расходятся
 		// Второй метод - медианный, производит оценку высоты внутри квадрата, как среднее от высот в вершинах квадрата
-		if (mode == MED_APPROXIMATION)
+		if (mode == AVERAGE)
 		{
 			// Берем среднее арифметическое из высот всех вершин квадрата и округляем до ближайшего целого
 			_ThisPoint.alt = (unsigned short)((GetMapProperties_Alt(i, j) + GetMapProperties_Alt(i + 1, j) + GetMapProperties_Alt(i, j + 1) + GetMapProperties_Alt(i + 1, j + 1)) / 4 + 0.5);
 			return _ThisPoint.alt;
 		}
 		// Третий метод - супремум, высота в квадрате определяется как максимальная среди вершин
-		else if (mode == MAX_APPROXIMATION)
+		else if (mode == UPPER_BOUND)
 		{
 			// Поиск максимума методом всплывающего пузырька
 			// Берем значение высоты первой вершины
@@ -338,6 +339,3 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 	// Если попали сюда, значит был указан несуществующий режим, возвращаем некорректное значение
 	return 0xFFFF;
 }
-
-
-

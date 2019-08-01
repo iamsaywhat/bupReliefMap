@@ -80,5 +80,8 @@ short GetMapProperties_Alt(unsigned int LON_INDEX, unsigned int LAT_INDEX)
 {
 	// Формула для расчета адреса чтения из памяти 54 + 800*(400 - 1 - j) + 2*i, 
 	// где 800 - размер пакета высот, количество точек по широте, 54 размер информационного пакета лежащего перед картой в памяти
-	return *(short*)(map + 54 + 800 * (400 - 1 - LAT_INDEX) + 2 * LON_INDEX);
+	short temp = *(short*)(map + 54 + 800 * (400 - 1 - LAT_INDEX) + 2 * LON_INDEX);
+	unsigned int adr = 54 + 800 * (400 - 1 - LAT_INDEX) + 2 * LON_INDEX;
+	adr = (short*)(map + 54 + 800 * (400 - 1 - LAT_INDEX) + 2 * LON_INDEX);
+	return temp;
 }
