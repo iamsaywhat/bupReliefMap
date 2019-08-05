@@ -20,8 +20,8 @@
 ********************************************************************/
 void nav_transform(point* p)
 {
-	p->lon += 180;
-	p->lat += 90;
+	p->lon += 180.0;
+	p->lat += 90.0;
 }
 
 
@@ -154,7 +154,7 @@ unsigned short MapHeight(point left_lower, point left_upper, point right_lower, 
 *********************************************************************************************************************/
 unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 {
-	unsigned short i,j;                     // Индексы навигации по узлам карты
+	unsigned short i,j;                   // Индексы навигации по узлам карты
 	point ThisPoint = {lon, lat, 0};      // Текущая геолокация
 	point NullPoint;                      // Нуль точка на карте (координаты левого нижнего угла карты)
 	unsigned short LonCount;              // Количество узловых точек по долготе
@@ -167,15 +167,15 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 
 	// Дополнительные переменные для поддержки грубых целочисленных режимов работы 
 	integer_point _NullPoint;            // Нуль точка на карте (координаты левого нижнего угла карты)
-	long long  _MapStepLon;           // Масштаб по долготе (количество секунд в одном делении)
-	long long  _MapStepLat;           // Масштаб по широте (количество секунд в одном делении)
+	long long  _MapStepLon;              // Масштаб по долготе (количество секунд в одном делении)
+	long long  _MapStepLat;              // Масштаб по широте (количество секунд в одном делении)
 	integer_point _ThisPoint;            // Текущая геолокация
 
 
 	// Считаем масштабы
 	MapStepLon = GetMapProperties_MapStepLon();
 	MapStepLat = GetMapProperties_MapStepLat(); 
-	// Узнаем нуль-точку (левая нижняя точка отсчета при построениb карты местности)
+	// Узнаем нуль-точку (левая нижняя точка отсчета при построению карты местности)
 	NullPoint.lon = GetMapProperties_NullPointLon(); 
 	NullPoint.lat = GetMapProperties_NullPointLat(); 
 	// Сделаем перенос координат в положительную полуплоскость для удобного сравнения
@@ -184,6 +184,35 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 	// Узнаем количество узловых точек по долготе и широте
 	LonCount = GetMapProperties_LonCount(); 
 	LatCount = GetMapProperties_LatCount();
+
+
+	/* Для случая нахождения карты прямо на нулевом меридиане ************************************************************************
+	   Сначала проверим попадает ли текущая координата в приведенный диапазон [0...360]
+	   На самом деле диапазон может быть больше, например, при определении границ карты возможна такая ситуация:
+
+	   Левая граница: |353         360         380|   Правая граница карты:
+	   Nullpoint.lon  |              =            |    NullPoint.lon + LonCount * MapStepLon
+	   =              |              0            |    =
+	   353                                             360
+	   
+	   Тогда 380 градусов по карте эквиваленты 20 градусам с учетом переноса в положительную полуплоскость.
+	   Допустим приходит координата (уже после переноса в положительную полуплоскость) равная 17 градусов.
+	   Тогда по карте это эквиваленто нашим 377. Но для того чтобы понять, что они эквиваленты, необходимо проверить
+	   1) Попадает или наша коррдината в границы карты от Nullpoint.lon до NullPoint.lon + LonCount * MapStepLon
+	   2) Если не попадает, тогда воможно это как раз такой случай, тогда
+	          получаем эквивалент нашей координаты в соответствии с наше проекцией карты прибавив 360
+			  проверяем предыдущее условие: попадает - окей
+			                                нет - значит мы просто за пределами карты, все в порядке
+
+	*/
+	if (ThisPoint.lon < NullPoint.lon || ThisPoint.lon >(NullPoint.lon + ((LonCount-1) * MapStepLon)))
+	{
+		// Не попадает, но возможно она 
+		ThisPoint.lon += 360.0;
+		if (ThisPoint.lon < NullPoint.lon || ThisPoint.lon >(NullPoint.lon + ((LonCount-1) * MapStepLon)))
+			return 0xFFFF;
+	}
+	//*******************************************************************************************************************************
 
 	/* Ищем квадрат в котором сейчас находимся
 	Будем перебирать сначала долготы от нуль-точки, пока не найдем индексы узловых точек по долготе, между которыми находимся
@@ -268,13 +297,13 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 	// Второй и третий метод имеют одинаковое начало
 	else if (mode == AVERAGE || mode == UPPER_BOUND)
 	{
-		// Осуществляем переход на целочисленный формат вычислений с точностью до 7 знаков после запятой
-		_NullPoint.lon = (long long)(NullPoint.lon * 10000000 + 0.5);
-		_NullPoint.lat = (long long)(NullPoint.lat * 10000000 + 0.5);
-		_MapStepLon = (long long)(MapStepLon * 10000000 + 0.5);
-		_MapStepLat = (long long)(MapStepLat * 10000000 + 0.5);
-		_ThisPoint.lon = (long long)(ThisPoint.lon * 10000000 + 0.5);
-		_ThisPoint.lat = (long long)(ThisPoint.lat * 10000000 + 0.5);
+		// Осуществляем переход на целочисленный формат вычислений с точностью до 12 знаков после запятой
+		_NullPoint.lon = (long long)(NullPoint.lon * 1e12 + 0.5);
+		_NullPoint.lat = (long long)(NullPoint.lat * 1e12 + 0.5);
+		_MapStepLon = (long long)(MapStepLon * 1e12 + 0.5);
+		_MapStepLat = (long long)(MapStepLat * 1e12 + 0.5);
+		_ThisPoint.lon = (long long)(ThisPoint.lon * 1e12 + 0.5);
+		_ThisPoint.lat = (long long)(ThisPoint.lat * 1e12 + 0.5);
 		_ThisPoint.alt = 0;
 
 		// Ищем по долготе (LonCount - 1 потому что индексы от 0 до 399, но 399 - крайний индекс, за его пределами карта отсутствует)

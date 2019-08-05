@@ -406,7 +406,7 @@ short alt_map[] = {
 
 char map[320054];
 
-void map_load(void)
+void map_load1(void)
 {
 	double temp;
 	short temp2;
@@ -449,6 +449,69 @@ void map_load(void)
 
 */
 
+
+
+
+
+
+
+
+void map_load2(void)
+{
+	double temp;
+	short temp2;
+	long i;
+
+	// Число широт
+	*(short*)(map + 18) = 400;
+	temp2 = *(short*)(map + 18);
+	// Число долгот
+	*(short*)(map + 20) = 400;
+	temp2 = *(short*)(map + 20);
+	// Левый нижний угол широта
+	*(double*)(map + 22) = 59.956306;
+	temp = *(double*)(map + 22);
+	// Левый нижний угол долгота
+	*(double*)(map + 30) = 179.291973;
+	temp = *(double*)(map + 30);
+	// Масштаб по широте: количество секунд в одном делении
+	*(double*)(map + 38) = 20.0;
+	temp = *(double*)(map + 38);
+	// Масштаб по долготе: количество секунд в одном делении
+	*(double*)(map + 46) = 20.0;
+	temp = *(double*)(map + 46);
+	// Далее пишем высоты
+	for (i = 0; i < 160000; i++)
+	{
+		*(short*)(map + 54 + 2 * i) = alt_map[i];
+		temp2 = *(short*)(map + 54 + 2 * i);
+	}
+}
+/*
+
+179.291973, 62.172973 ______________________ -1,508643, 62.172973
+		 |                                          |
+		 |                                          |
+		 |                                          |
+		 |                                          |
+179.291973, 59.956306 ______________________ -1,508643, 59.956306
+
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int main(void)
 {
 
@@ -459,7 +522,7 @@ int main(void)
 	point location;
 	short alt;
 
-	map_load();
+	map_load1();
 
 	alt = GetHeight_OnThisPoint(30.31, 59.98, 8);
 
@@ -508,15 +571,68 @@ int main(void)
 
 
 
-	alt = GetHeight_OnThisPoint(30.511806, 60.11245, TRIANGULARTION);
-	alt = GetHeight_OnThisPoint(31.511806, 61.11245, TRIANGULARTION);
 
 
 
-	alt = GetHeight_OnThisPoint(30.31, 59.98, UPPER_BOUND);
-	alt = GetHeight_OnThisPoint(30.31, 59.98, AVERAGE);
-	alt = GetHeight_OnThisPoint(30.310150, 59.97986, TRIANGULARTION);
-	alt = GetHeight_OnThisPoint(30.310150, 59.97986, UPPER_BOUND);
-	alt = GetHeight_OnThisPoint(30.310150, 59.97986, AVERAGE);
+
+
+
+
+
+
+
+
+	map_load2();
+	/*
+	                                         (181,50863)
+179.291973, 62.172973 ______________________ -178,49136, 62.172973
+		 |                                          |
+		 |                                          |
+		 |                                          |
+		 |                                          |
+179.291973, 59.956306 ______________________ -178,49136, 59.956306
+                                             (181,50863)
+
+*/
+// Случай, если карта лежит на нулевом меридиане **********************************************************************************************
+// Проверка угловых квадратов**********************************************************************
+// Точка в нижнем левом квадрате
+	alt = GetHeight_OnThisPoint(179.292020, 59.956434, TRIANGULARTION);
+	alt = GetHeight_OnThisPoint(179.292020, 59.956434, AVERAGE);
+	alt = GetHeight_OnThisPoint(179.292020, 59.956434, UPPER_BOUND);
+	// Точка в верхнем левом квадрате
+	alt = GetHeight_OnThisPoint(179.292020, 62.172800, TRIANGULARTION);
+	alt = GetHeight_OnThisPoint(179.292020, 62.172800, AVERAGE);
+	alt = GetHeight_OnThisPoint(179.292020, 62.172800, UPPER_BOUND);
+	// Точка в верхнем правом квадрате
+	alt = GetHeight_OnThisPoint(-178.49137, 62.172800, TRIANGULARTION);
+	alt = GetHeight_OnThisPoint(-178.49137, 62.172800, AVERAGE);
+	alt = GetHeight_OnThisPoint(-178.49137, 62.172800, UPPER_BOUND);
+	// Точка в нижнем правом квадрате
+	alt = GetHeight_OnThisPoint(-178.49137, 59.956434, TRIANGULARTION);
+	alt = GetHeight_OnThisPoint(-178.49137, 59.956434, AVERAGE);
+	alt = GetHeight_OnThisPoint(-178.49137, 59.956434, UPPER_BOUND);
+	// ***************************************************************************************************
+
+
+
+	// Проверка выхода за пределы карты*******************************************************************
+	// Точка слева от квадрата
+	alt = GetHeight_OnThisPoint(179.291972, 59.956434, TRIANGULARTION);
+	alt = GetHeight_OnThisPoint(179.291972, 59.956434, AVERAGE);
+	alt = GetHeight_OnThisPoint(179.291972, 59.956434, UPPER_BOUND);
+	// Точка сверху от квадрата
+	alt = GetHeight_OnThisPoint(179.291974, 62.172974, TRIANGULARTION);
+	alt = GetHeight_OnThisPoint(179.291974, 62.172974, AVERAGE);
+	alt = GetHeight_OnThisPoint(179.291974, 62.172974, UPPER_BOUND);
+	// Точка справа от квадрата
+	alt = GetHeight_OnThisPoint(-178.49135, 59.956434, TRIANGULARTION);
+	alt = GetHeight_OnThisPoint(-178.49135, 59.956434, AVERAGE);
+	alt = GetHeight_OnThisPoint(-178.49135, 59.956434, UPPER_BOUND);
+	// Точка снизу от квадрата
+	alt = GetHeight_OnThisPoint(179.291974, 59.956304, TRIANGULARTION);
+	alt = GetHeight_OnThisPoint(179.291974, 59.956304, AVERAGE);
+	alt = GetHeight_OnThisPoint(179.291974, 59.956304, UPPER_BOUND);
+	// ****************************************************************************************************
 
 }
