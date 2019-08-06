@@ -104,7 +104,7 @@ void HeightFromPlane(point a, point b, point c, point* loc)
 /*********************************************************************************************************************************************
 		MapHeight - Определение высоты рельефа в точке location, по 4 ближайшим вершинам сетки
 *********************************************************************************************************************************************/
-unsigned short MapHeight(point left_lower, point left_upper, point right_lower, point right_upper, point location)
+short MapHeight(point left_lower, point left_upper, point right_lower, point right_upper, point location)
 {
 	point A, B, C, D;
 	point LOC;
@@ -122,13 +122,13 @@ unsigned short MapHeight(point left_lower, point left_upper, point right_lower, 
 	// Контроль входных параметров
 	// Точка С должна быть в левом нижнем углу, поэтому не должно быть точек с меньшей долготой и меньшей широтой, чем у С
 	if ((C.lon > A.lon) || (C.lon > B.lon) || (C.lon > D.lon) || (C.lat > A.lat) || (C.lat > B.lat) || (C.lat > D.lat))
-		return 0xFFFF; // Ошибка возвращаем некорректное число
+		return 0x7FFF; // Ошибка возвращаем некорректное число
 	// Точка A должна быть в левом верхнем углу, поэтому не должно быть точек с меньшей долготой и большей широтой, чем у А
 	if ((A.lon > C.lon) || (A.lon > B.lon) || (A.lon > D.lon) || (A.lat < C.lat) || (A.lat < B.lat) || (A.lat < D.lat))
-		return 0xFFFF; // Ошибка возвращаем некорректное число
+		return 0x7FFF; // Ошибка возвращаем некорректное число
 	// Точка B должна быть в правом верхнем углу, поэтому не должно быть точек с большей долготой и большей широтой, чем у B
 	if ((B.lon < A.lon) || (B.lon < C.lon) || (B.lon < D.lon) || (B.lat < A.lat) || (B.lat < C.lat) || (B.lat < D.lat))
-		return 0xFFFF; // Ошибка возвращаем некорректное число
+		return 0x7FFF; // Ошибка возвращаем некорректное число
 	/* Точку D можно не проверять */
 
 	// Проверим принадлежность точки location треугольнику ABC
@@ -144,7 +144,7 @@ unsigned short MapHeight(point left_lower, point left_upper, point right_lower, 
 		return (unsigned short)(LOC.alt+0.5);
 	}
 	// Странно, точка не приналежит ни одному из треугольников - верну ошибку
-	return 0xFFFF;;
+	return 0x7FFF;;
 }
 
 
@@ -152,7 +152,7 @@ unsigned short MapHeight(point left_lower, point left_upper, point right_lower, 
 /********************************************************************************************************************
 			 GetHeight_OnThisPoint - Узнать высоту рельефа в данной точке
 *********************************************************************************************************************/
-unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
+short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 {
 	unsigned short i,j;                   // Индексы навигации по узлам карты
 	point ThisPoint = {lon, lat, 0};      // Текущая геолокация
@@ -210,7 +210,7 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 		// Не попадает, но возможно она 
 		ThisPoint.lon += 360.0;
 		if (ThisPoint.lon < NullPoint.lon || ThisPoint.lon >(NullPoint.lon + ((LonCount-1) * MapStepLon)))
-			return 0xFFFF;
+			return 0x7FFF;
 	}
 	//*******************************************************************************************************************************
 
@@ -270,7 +270,7 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 		// Тогда необходимо проверить флаги выхода за пределы карты, если они не были сброшены, значит мы вне карты
 		// И высоту рельефа узнать не можем, поэтому возвращаем некорректное значение и выходим
 		if (OutRangeLat || OutRangeLon)
-			return 0xFFFF;
+			return 0x7FFF;
 
 		// Теперь необходимо узнать координаты всех 4 точек образующих квадрат
 		// Зная индексы от нуль точки и шаг сетки, это сделать легко:
@@ -335,7 +335,7 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 		// Тогда необходимо проверить флаги выхода за пределы карты, если они не были сброшены, значит мы вне карты
 		// И высоту рельефа узнать не можем, поэтому возвращаем некорректное значение и выходим
 		if (OutRangeLat || OutRangeLon)
-			return 0xFFFF;
+			return 0x7FFF;
 
 
 		// Здесь наконец второй и третий методы расходятся
@@ -366,5 +366,43 @@ unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 		}
 	}
 	// Если попали сюда, значит был указан несуществующий режим, возвращаем некорректное значение
-	return 0xFFFF;
+	return 0x7FFF;
+}
+
+
+
+char GetAvailabilityStatus(double lon, double lat)
+{
+	point ThisPoint = { lon, lat, 0 };      // Текущая геолокация
+	point NullPoint;                      // Нуль точка на карте (координаты левого нижнего угла карты)
+	double MapStepLat, MapStepLon;
+	double LonCount, LatCount;
+
+	// Узнаем нуль-точку (левая нижняя точка отсчета при построению карты местности)
+	NullPoint.lon = GetMapProperties_NullPointLon();
+	NullPoint.lat = GetMapProperties_NullPointLat();
+	// Считаем масштабы
+	MapStepLon = GetMapProperties_MapStepLon();
+	MapStepLat = GetMapProperties_MapStepLat();
+	// Узнаем количество узловых точек по долготе и широте
+	LonCount = GetMapProperties_LonCount();
+	LatCount = GetMapProperties_LatCount();
+
+	// Сделаем перенос координат в положительную полуплоскость для удобного сравнения
+	nav_transform(&NullPoint); // Нуль точку
+	nav_transform(&ThisPoint); // Текущая геолокация
+
+	if (ThisPoint.lon < NullPoint.lon || ThisPoint.lon >(NullPoint.lon + ((LonCount - 1) * MapStepLon)))
+	{
+		// Не попадает, но возможно она 
+		ThisPoint.lon += 360.0;
+		if (ThisPoint.lon < NullPoint.lon || ThisPoint.lon >(NullPoint.lon + ((LonCount - 1) * MapStepLon)))
+			return 0; // Данная точка находится за пределами карты - карта недоступна в этой точке
+	}
+	if (ThisPoint.lat < NullPoint.lat || ThisPoint.lat >(NullPoint.lat + ((LatCount - 1) * MapStepLat)))
+			return 0; // Данная точка находится за пределами карты - карта недоступна в этой точке
+
+	return 1; // Данная точка находится в пределах карты - карта доступна в этой точке
+
+
 }

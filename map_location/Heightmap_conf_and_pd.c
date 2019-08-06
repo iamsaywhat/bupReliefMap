@@ -85,3 +85,4 @@ short GetMapProperties_Alt(unsigned int LON_INDEX, unsigned int LAT_INDEX)
 	adr = (short*)(map + 54 + 800 * (400 - 1 - LAT_INDEX) + 2 * LON_INDEX);
 	return temp;
 }
+

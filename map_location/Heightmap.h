@@ -152,7 +152,7 @@ typedef struct {
 typedef struct {
 	long long lon;       // Долгота x
 	long long lat;       // Широта y
-	unsigned short alt;     // Высота z
+	short alt;     // Высота z
 }integer_point;
 
 // Режимы вычисления функции GetHeigh_OnThisPoint()
@@ -175,10 +175,10 @@ typedef enum {
 			 Возвращает:
 						Значение высоты в данной точке
 						либо
-						если мы вышли за пределы карты - 0xFF
+						если мы вышли за пределы карты - 0x7FFF
 
 *********************************************************************************************************************/
-unsigned short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode);
+short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode);
 
 
 
@@ -224,12 +224,25 @@ void HeightFromPlane(point a, point b, point c, point* loc);
 
 		Возвращает: Округленную по ближайшего целого высоту в точке location
 					либо
-					0xFFFF - если ошибка в аргументах, либо точка location вне квадрата
+					0x7FFF - если ошибка в аргументах, либо точка location вне квадрата
 
 		Примечание: Порядок вершин крайне важен, иначе вернёт ошибку
 *********************************************************************************************************************************************/
-unsigned short MapHeight(point left_lower, point left_upper, point right_lower, point right_upper, point location);
+short MapHeight(point left_lower, point left_upper, point right_lower, point right_upper, point location);
 
+
+
+/*********************************************************************************************************************************************
+		GetAvailabilityStatus - Получить статус доступности карты в точке (lat,lon)
+		Параметры:
+					lat - Координата точки по широте
+					lon - Координата точки по долготе
+
+		Возвращает: 
+					0 - Данная точка находится за пределами карты, карта в этой точке недоступна
+					1 - Карта высот в этой точке доступна
+*********************************************************************************************************************************************/
+char GetAvailabilityStatus(double lon, double lat);
 
 
 #endif // !_HEIGHT_MAP_
