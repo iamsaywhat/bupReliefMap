@@ -4,19 +4,15 @@
 
 
 /********************************************************************
-
-	   nav_transform - Замена координат (приведение диапазонов)
-
-	   Параметры: указатель на point
-
-	   Возвращает: через указатель приведенные координаты
-
-	   Примечание:
-	   исходно широта  [-90, 90]    приводим к [0, 180]
-	          долгота  [-180, 180]             [0, 360]
-       
-	   для того, чтобы удобно было сравнивать координаты
-
+	nav_transform - Замена координат (приведение диапазонов)
+	Параметры:
+				указатель на point
+	Возвращает:
+				через указатель приведенные координаты
+	Примечание:
+				исходно широта  [-90, 90]    приводим к [0, 180]
+				долгота  [-180, 180]             [0, 360]
+				для того, чтобы удобно было сравнивать координаты
 ********************************************************************/
 void nav_transform(point* p)
 {
@@ -26,11 +22,9 @@ void nav_transform(point* p)
 
 
 /*********************************************************************************************
-			
-			area - Вычисление площади треугольника по 3м точкам
-			
-			Параметры: a, b, c точки типа point с координатами
-
+	area - Вычисление площади треугольника по 3м точкам
+	Параметры:
+				a, b, c точки типа point с координатами
 *********************************************************************************************/
 double area(point a, point b, point c)
 {
@@ -43,8 +37,8 @@ double area(point a, point b, point c)
 }
 
 /**********************************************************************************************
-			 TrianglePos - Определение принадлежности точки loc, треугольнику с вершинами 
-			 a,b,c.
+	TrianglePos - Определение принадлежности точки loc, треугольнику с вершинами
+	a,b,c.
 ***********************************************************************************************/
 char TrianglePos(point a, point b, point c, point loc)
 {
@@ -64,8 +58,8 @@ char TrianglePos(point a, point b, point c, point loc)
 }
 
 /************************************************************************************************
-			HeightFromPlane - Построение поверхности по трём точкам и вычисление высоты
-			в точке с координатами loc (метод триангуляции).
+	HeightFromPlane - Построение поверхности по трём точкам и вычисление высоты
+	в точке с координатами loc (метод триангуляции).
 ************************************************************************************************/
 void HeightFromPlane(point a, point b, point c, point* loc)
 {
@@ -76,14 +70,14 @@ void HeightFromPlane(point a, point b, point c, point* loc)
 	|x-x1   x2-x1   x3-x1|     |matr[0] matr[1] matr[2]|
 	|y-y1   y2-y1   y3-y1|  =  |matr[3] matr[4] matr[5]|
 	|z-z1   z2-z1   z3-z1|     |matr[6] matr[7] matr[8]|  	*/
-            
+
 	matr[0] = loc->lon - a.lon;  // x-x1
 	matr[1] = b.lon - a.lon;     // x2-x1
 	matr[2] = c.lon - a.lon;     // x3-x1
 	matr[3] = loc->lat - a.lat;  // y-y1
 	matr[4] = b.lat - a.lat;     // y2-y1
 	matr[5] = c.lat - a.lat;     // y3-y1
- 	matr[6] = 0;                 // z-z1 (не сипользуем, так как сразу выразим высоту ниже)
+	matr[6] = 0;                 // z-z1 (не сипользуем, так как сразу выразим высоту ниже)
 	matr[7] = b.alt - a.alt;     // z2-z1
 	matr[8] = c.alt - a.alt;     // z3-z1
 
@@ -91,7 +85,7 @@ void HeightFromPlane(point a, point b, point c, point* loc)
 	delta1 = matr[4] * matr[8] - matr[5] * matr[7];
 	delta2 = matr[1] * matr[8] - matr[2] * matr[7];
 	delta3 = matr[1] * matr[5] - matr[2] * matr[4];
-	
+
 	/* Уравнение плоскости находится из определителя матрицы, то есть
 	(x-x1)*delta1 - (y-y1)*delta2 + (z-z1)*delta3 = 0 ,
 	но мы уравнение прямой искать не будем, вместо этого выразим z, а вместо x и y подставим координаты loc.lon и loc.lat соответсвенно.
@@ -102,7 +96,7 @@ void HeightFromPlane(point a, point b, point c, point* loc)
 
 
 /*********************************************************************************************************************************************
-		MapHeight - Определение высоты рельефа в точке location, по 4 ближайшим вершинам сетки
+	MapHeight - Определение высоты рельефа в точке location, по 4 ближайшим вершинам сетки
 *********************************************************************************************************************************************/
 short MapHeight(point left_lower, point left_upper, point right_lower, point right_upper, point location)
 {
@@ -114,7 +108,7 @@ short MapHeight(point left_lower, point left_upper, point right_lower, point rig
 	LOC.alt = 0;
 
 	// Фиксируем точки нашего квадрата 
-	A = left_upper;  
+	A = left_upper;
 	B = right_upper;
 	C = left_lower;
 	D = right_lower;
@@ -134,14 +128,14 @@ short MapHeight(point left_lower, point left_upper, point right_lower, point rig
 	// Проверим принадлежность точки location треугольнику ABC
 	if (TrianglePos(A, B, C, LOC))
 	{
-		HeightFromPlane(A, B, C, &LOC); 
+		HeightFromPlane(A, B, C, &LOC);
 		return (unsigned short)(LOC.alt + 0.5);
 	}
 	// Тогда точка location должна принадлежность треугольнику BCD
 	else if (TrianglePos(C, B, D, LOC))
 	{
-		HeightFromPlane(C, B, D, &LOC); 
-		return (unsigned short)(LOC.alt+0.5);
+		HeightFromPlane(C, B, D, &LOC);
+		return (unsigned short)(LOC.alt + 0.5);
 	}
 	// Странно, точка не приналежит ни одному из треугольников - верну ошибку
 	return MAP_NO_SOLUTION;;
@@ -150,12 +144,12 @@ short MapHeight(point left_lower, point left_upper, point right_lower, point rig
 
 
 /********************************************************************************************************************
-			 GetHeight_OnThisPoint - Узнать высоту рельефа в данной точке
+	GetHeight_OnThisPoint - Узнать высоту рельефа в данной точке
 *********************************************************************************************************************/
 short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 {
-	unsigned short i,j;                   // Индексы навигации по узлам карты
-	point ThisPoint = {lon, lat, 0};      // Текущая геолокация
+	unsigned short i, j;                   // Индексы навигации по узлам карты
+	point ThisPoint = { lon, lat, 0 };      // Текущая геолокация
 	point NullPoint;                      // Нуль точка на карте (координаты левого нижнего угла карты)
 	unsigned short LonCount;              // Количество узловых точек по долготе
 	unsigned short LatCount;              // Количество узловых точек по долготе
@@ -174,15 +168,15 @@ short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 
 	// Считаем масштабы
 	MapStepLon = GetMapProperties_MapStepLon();
-	MapStepLat = GetMapProperties_MapStepLat(); 
+	MapStepLat = GetMapProperties_MapStepLat();
 	// Узнаем нуль-точку (левая нижняя точка отсчета при построению карты местности)
-	NullPoint.lon = GetMapProperties_NullPointLon(); 
-	NullPoint.lat = GetMapProperties_NullPointLat(); 
+	NullPoint.lon = GetMapProperties_NullPointLon();
+	NullPoint.lat = GetMapProperties_NullPointLat();
 	// Сделаем перенос координат в положительную полуплоскость для удобного сравнения
 	nav_transform(&NullPoint); // Нуль точку
 	nav_transform(&ThisPoint); // Текущая геолокация
 	// Узнаем количество узловых точек по долготе и широте
-	LonCount = GetMapProperties_LonCount(); 
+	LonCount = GetMapProperties_LonCount();
 	LatCount = GetMapProperties_LatCount();
 
 
@@ -194,22 +188,21 @@ short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 	   Nullpoint.lon  |              =            |    NullPoint.lon + LonCount * MapStepLon
 	   =              |              0            |    =
 	   353                                             360
-	   
+
 	   Тогда 380 градусов по карте эквиваленты 20 градусам с учетом переноса в положительную полуплоскость.
 	   Допустим приходит координата (уже после переноса в положительную полуплоскость) равная 17 градусов.
 	   Тогда по карте это эквиваленто нашим 377. Но для того чтобы понять, что они эквиваленты, необходимо проверить
 	   1) Попадает или наша коррдината в границы карты от Nullpoint.lon до NullPoint.lon + LonCount * MapStepLon
 	   2) Если не попадает, тогда воможно это как раз такой случай, тогда
-	          получаем эквивалент нашей координаты в соответствии с наше проекцией карты прибавив 360
-			  проверяем предыдущее условие: попадает - окей
-			                                нет - значит мы просто за пределами карты, все в порядке
+		получаем эквивалент нашей координаты в соответствии с наше проекцией карты прибавив 360
+		проверяем предыдущее условие: попадает - окей
+		нет - значит мы просто за пределами карты, все в порядке */
 
-	*/
-	if (ThisPoint.lon < NullPoint.lon || ThisPoint.lon >(NullPoint.lon + ((LonCount-1) * MapStepLon)))
+	if (ThisPoint.lon < NullPoint.lon || ThisPoint.lon >(NullPoint.lon + ((LonCount - 1) * MapStepLon)))
 	{
 		// Не попадает, но возможно она 
 		ThisPoint.lon += 360.0;
-		if (ThisPoint.lon < NullPoint.lon || ThisPoint.lon >(NullPoint.lon + ((LonCount-1) * MapStepLon)))
+		if (ThisPoint.lon < NullPoint.lon || ThisPoint.lon >(NullPoint.lon + ((LonCount - 1) * MapStepLon)))
 			return MAP_NO_SOLUTION;
 	}
 	//*******************************************************************************************************************************
@@ -217,32 +210,32 @@ short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 	/* Ищем квадрат в котором сейчас находимся
 	Будем перебирать сначала долготы от нуль-точки, пока не найдем индексы узловых точек по долготе, между которыми находимся
 	После будем перебирать широты от нуль-точки, пока не найдем индексы узловых точек по широте, между которыми находимся
-	Фактически нужно найти координаты точки с индексами (i,j), такими что точка ThisPoint (текущая геолокация) будет лежать 
+	Фактически нужно найти координаты точки с индексами (i,j), такими что точка ThisPoint (текущая геолокация) будет лежать
 	в квадрате:
 		|        |         |         |
-	____|________|_________|_________|___	
-     j+2|        |         |         |
+	____|________|_________|_________|___
+	 j+2|        |         |         |
 		|        |         |         |
-	    |        |         |         |
-    ____|________|_________|_________|___
+		|        |         |         |
+	____|________|_________|_________|___
 	j+1 |        |\\\\\\\\\|         |
 		|        |\\\\\\\\\|         |<-------- Закрашеный это нужный квадрат, где- то в этом квадрате находится точка ThisPoint
 		|        |\\\\\\\\\|         |          квадрат задан индексами (i,j+1)_________(i+1, j+1)
-	____|i-1_____|i________|i+1______|___		                               |        |
-	   j|		 |         |         |                                         |   o    |
-		|		 |         |         |                                    (i,j)|________|(i+1, j)
-		|        |         |         |          Зная индексы можно узнать кординаты всех этих точек как          
-	____|________|_________|_________|___       (i,j) -> (NullPoint.lon + MapStepLon*i) - долгота узловой точки с индексом (i,j)
-	 j-1|        |         |         |                   (NullPoint.lat + MapStepLat*j) - широта узловой точки с индексом (i,j)
-			   
+	____|i-1_____|i________|i+1______|___                                      |        |
+	   j|        |         |         |                                         |   o    |
+		|        |         |         |                                    (i,j)|________|(i+1, j)
+		|        |         |         |            Зная индексы можно узнать кординаты всех этих точек как
+	____|________|_________|_________|___         (i,j) -> (NullPoint.lon + MapStepLon*i) - долгота узловой точки с индексом (i,j)
+	 j-1|        |         |         |            (NullPoint.lat + MapStepLat*j) - широта узловой точки с индексом (i,j)
+
    */
 
-	// Дальше реализуем ветвление алгоритма по методам
-	// Первый метод наиболее точный - триангуляция
-	if(mode == TRIANGULARTION)
+   // Дальше реализуем ветвление алгоритма по методам
+   // Первый метод наиболее точный - триангуляция
+	if (mode == TRIANGULARTION)
 	{
 		// Ищем по долготе (LonCount - 1 потому что индексы от 0 до 399, но 399 - крайний индекс, за его пределами карта отсутствует)
-		for (i = 0; i < LonCount-1; i++)
+		for (i = 0; i < LonCount - 1; i++)
 		{
 			// Необходимо найти такой индекс i, при котором текущая геолокация будет лежать между i и i+1 шагом по долготе в сетке карты
 			if (NullPoint.lon <= ThisPoint.lon && (NullPoint.lon + MapStepLon) >= ThisPoint.lon)
@@ -255,7 +248,7 @@ short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 			else NullPoint.lon += MapStepLon;
 		}
 		// Ищем по широте (LatCount - 1 потому что индексы от 0 до 399, но 399 - крайний индекс, за его пределами карта отсутствует)
-		for (j = 0; j < LatCount-1; j++)
+		for (j = 0; j < LatCount - 1; j++)
 		{
 			// Необходимо найти такой индекс j, при котором текущая геолокация будет лежать между j и j+1 шагом по широте в сетке карты
 			if (NullPoint.lat <= ThisPoint.lat && (NullPoint.lat + MapStepLat) >= ThisPoint.lat)
@@ -361,7 +354,7 @@ short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 			// Если в следующей вершине высота больше, берем ее, если нет - то не берем.
 			if (_ThisPoint.alt < GetMapProperties_Alt(i + 1, j + 1))
 				_ThisPoint.alt = GetMapProperties_Alt(i + 1, j + 1);
-			
+
 			return _ThisPoint.alt;
 		}
 	}
@@ -400,7 +393,7 @@ Heightmap_STATUS GetAvailabilityStatus(double lon, double lat)
 			return MAP_NOT_AVAILABLE; // Данная точка находится за пределами карты - карта недоступна в этой точке
 	}
 	if (ThisPoint.lat < NullPoint.lat || ThisPoint.lat >(NullPoint.lat + ((LatCount - 1) * MapStepLat)))
-			return MAP_NOT_AVAILABLE; // Данная точка находится за пределами карты - карта недоступна в этой точке
+		return MAP_NOT_AVAILABLE; // Данная точка находится за пределами карты - карта недоступна в этой точке
 
 	return MAP_AVAILABLE; // Данная точка находится в пределах карты - карта доступна в этой точке
 
