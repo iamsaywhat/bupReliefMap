@@ -4,143 +4,51 @@
 
 
 /********************************************************************
-	nav_transform - Замена координат (приведение диапазонов)
-	Параметры:
-				указатель на point
-	Возвращает:
-				через указатель приведенные координаты
-	Примечание:
-				исходно широта  [-90, 90]    приводим к [0, 180]
-				долгота  [-180, 180]             [0, 360]
-				для того, чтобы удобно было сравнивать координаты
+    Приватные функции модуля
 ********************************************************************/
-void nav_transform(point* p)
-{
-	p->lon += 180.0;
-	p->lat += 90.0;
-}
-
-
-/*********************************************************************************************
-	area - Вычисление площади треугольника по 3м точкам
-	Параметры:
-				a, b, c точки типа point с координатами
-*********************************************************************************************/
-double area(point a, point b, point c)
-{
-	double res;
-	res = ((a.lon - c.lon) * (b.lat - c.lat) + (b.lon - c.lon) * (c.lat - a.lat));
-	// Берём модуль
-	res = fabs(res);
-
-	return res;
-}
-
-/**********************************************************************************************
-	TrianglePos - Определение принадлежности точки loc, треугольнику с вершинами
-	a,b,c.
-***********************************************************************************************/
-char TrianglePos(point a, point b, point c, point loc)
-{
-	double abc = area(a, b, c);
-	double abd = area(a, b, loc);
-	double adc = area(a, loc, c);
-	double bdc = area(b, loc, c);
-	double sum, eps;
-
-	sum = abd + adc + bdc;
-	eps = (abc / 100.0) * 0.0000000001;
-	//if (abc == abd + adc + bdc)
-	if (fabs(abd + adc + bdc - abc) < eps)
-		return 1;
-	else
-		return 0;
-}
-
-/************************************************************************************************
-	HeightFromPlane - Построение поверхности по трём точкам и вычисление высоты
-	в точке с координатами loc (метод триангуляции).
-************************************************************************************************/
-void HeightFromPlane(point a, point b, point c, point* loc)
-{
-	double matr[9];                   // Матрица для вычисления уравнения плоскости
-	double delta1, delta2, delta3;    // Миноры матрицы
-
-	/* Заполняем матрицу
-	|x-x1   x2-x1   x3-x1|     |matr[0] matr[1] matr[2]|
-	|y-y1   y2-y1   y3-y1|  =  |matr[3] matr[4] matr[5]|
-	|z-z1   z2-z1   z3-z1|     |matr[6] matr[7] matr[8]|  	*/
-
-	matr[0] = loc->lon - a.lon;  // x-x1
-	matr[1] = b.lon - a.lon;     // x2-x1
-	matr[2] = c.lon - a.lon;     // x3-x1
-	matr[3] = loc->lat - a.lat;  // y-y1
-	matr[4] = b.lat - a.lat;     // y2-y1
-	matr[5] = c.lat - a.lat;     // y3-y1
-	matr[6] = 0;                 // z-z1 (не сипользуем, так как сразу выразим высоту ниже)
-	matr[7] = b.alt - a.alt;     // z2-z1
-	matr[8] = c.alt - a.alt;     // z3-z1
-
-	// Считаем миноры матрицы
-	delta1 = matr[4] * matr[8] - matr[5] * matr[7];
-	delta2 = matr[1] * matr[8] - matr[2] * matr[7];
-	delta3 = matr[1] * matr[5] - matr[2] * matr[4];
-
-	/* Уравнение плоскости находится из определителя матрицы, то есть
-	(x-x1)*delta1 - (y-y1)*delta2 + (z-z1)*delta3 = 0 ,
-	но мы уравнение прямой искать не будем, вместо этого выразим z, а вместо x и y подставим координаты loc.lon и loc.lat соответсвенно.
-	Тогда получим : */
-	loc->alt = (matr[3] * delta2 - matr[0] * delta1) / delta3 + a.alt;
-	// Результат записываем сразу в структуру
-}
+static void nav_transform(point* p);
+static double area(point a, point b, point c);
+static short MapHeight(point left_lower, point left_upper, point right_lower, point right_upper, point location);
+static void HeightFromPlane(point a, point b, point c, point* loc);
+static char TrianglePos(point a, point b, point c, point loc);
 
 
 /*********************************************************************************************************************************************
-	MapHeight - Определение высоты рельефа в точке location, по 4 ближайшим вершинам сетки
+	GetAvailabilityStatus - Получить статус доступности карты в точке (lat,lon)
 *********************************************************************************************************************************************/
-short MapHeight(point left_lower, point left_upper, point right_lower, point right_upper, point location)
+Heightmap_STATUS GetAvailabilityStatus(double lon, double lat)
 {
-	point A, B, C, D;
-	point LOC;
+	point ThisPoint = { lon, lat, 0 };      // Текущая геолокация
+	point NullPoint;                        // Нуль точка на карте (координаты левого нижнего угла карты)
+	double MapStepLat, MapStepLon;          // Шаг сетки по широте и долготе
+	double LonCount, LatCount;              // Количество узловых точек
 
-	LOC.lon = location.lon;
-	LOC.lat = location.lat;
-	LOC.alt = 0;
+	// Узнаем нуль-точку (левая нижняя точка отсчета при построению карты местности)
+	NullPoint.lon = GetMapProperties_NullPointLon();
+	NullPoint.lat = GetMapProperties_NullPointLat();
+	// Считаем масштабы
+	MapStepLon = GetMapProperties_MapStepLon();
+	MapStepLat = GetMapProperties_MapStepLat();
+	// Узнаем количество узловых точек по долготе и широте
+	LonCount = GetMapProperties_LonCount();
+	LatCount = GetMapProperties_LatCount();
 
-	// Фиксируем точки нашего квадрата 
-	A = left_upper;
-	B = right_upper;
-	C = left_lower;
-	D = right_lower;
+	// Сделаем перенос координат в положительную полуплоскость для удобного сравнения
+	nav_transform(&NullPoint); // Нуль точку
+	nav_transform(&ThisPoint); // Текущая геолокация
 
-	// Контроль входных параметров
-	// Точка С должна быть в левом нижнем углу, поэтому не должно быть точек с меньшей долготой и меньшей широтой, чем у С
-	if ((C.lon > A.lon) || (C.lon > B.lon) || (C.lon > D.lon) || (C.lat > A.lat) || (C.lat > B.lat) || (C.lat > D.lat))
-		return MAP_NO_SOLUTION; // Ошибка возвращаем некорректное число
-	// Точка A должна быть в левом верхнем углу, поэтому не должно быть точек с меньшей долготой и большей широтой, чем у А
-	if ((A.lon > C.lon) || (A.lon > B.lon) || (A.lon > D.lon) || (A.lat < C.lat) || (A.lat < B.lat) || (A.lat < D.lat))
-		return MAP_NO_SOLUTION; // Ошибка возвращаем некорректное число
-	// Точка B должна быть в правом верхнем углу, поэтому не должно быть точек с большей долготой и большей широтой, чем у B
-	if ((B.lon < A.lon) || (B.lon < C.lon) || (B.lon < D.lon) || (B.lat < A.lat) || (B.lat < C.lat) || (B.lat < D.lat))
-		return MAP_NO_SOLUTION; // Ошибка возвращаем некорректное число
-	/* Точку D можно не проверять */
-
-	// Проверим принадлежность точки location треугольнику ABC
-	if (TrianglePos(A, B, C, LOC))
+	if (ThisPoint.lon < NullPoint.lon || ThisPoint.lon >(NullPoint.lon + ((LonCount - 1) * MapStepLon)))
 	{
-		HeightFromPlane(A, B, C, &LOC);
-		return (unsigned short)(LOC.alt + 0.5);
+		// Не попадает, но возможно она 
+		ThisPoint.lon += 360.0;
+		if (ThisPoint.lon < NullPoint.lon || ThisPoint.lon >(NullPoint.lon + ((LonCount - 1) * MapStepLon)))
+			return MAP_NOT_AVAILABLE; // Данная точка находится за пределами карты - карта недоступна в этой точке
 	}
-	// Тогда точка location должна принадлежность треугольнику BCD
-	else if (TrianglePos(C, B, D, LOC))
-	{
-		HeightFromPlane(C, B, D, &LOC);
-		return (unsigned short)(LOC.alt + 0.5);
-	}
-	// Странно, точка не приналежит ни одному из треугольников - верну ошибку
-	return MAP_NO_SOLUTION;;
+	if (ThisPoint.lat < NullPoint.lat || ThisPoint.lat >(NullPoint.lat + ((LatCount - 1) * MapStepLat)))
+		return MAP_NOT_AVAILABLE; // Данная точка находится за пределами карты - карта недоступна в этой точке
+
+	return MAP_AVAILABLE; // Данная точка находится в пределах карты - карта доступна в этой точке
 }
-
 
 
 /********************************************************************************************************************
@@ -363,39 +271,165 @@ short GetHeight_OnThisPoint(double lon, double lat, MAP_MODE mode)
 }
 
 
-
-Heightmap_STATUS GetAvailabilityStatus(double lon, double lat)
+/********************************************************************
+	nav_transform - Замена координат (приведение диапазонов)
+	Параметры:
+				указатель на point
+	Возвращает:
+				через указатель приведенные координаты
+	Примечание:
+				исходно широта  [-90, 90]    приводим к [0, 180]
+				долгота  [-180, 180]             [0, 360]
+				для того, чтобы удобно было сравнивать координаты
+********************************************************************/
+static void nav_transform(point* p)
 {
-	point ThisPoint = { lon, lat, 0 };      // Текущая геолокация
-	point NullPoint;                        // Нуль точка на карте (координаты левого нижнего угла карты)
-	double MapStepLat, MapStepLon;          // Шаг сетки по широте и долготе
-	double LonCount, LatCount;              // Количество узловых точек
+	p->lon += 180.0;
+	p->lat += 90.0;
+}
 
-	// Узнаем нуль-точку (левая нижняя точка отсчета при построению карты местности)
-	NullPoint.lon = GetMapProperties_NullPointLon();
-	NullPoint.lat = GetMapProperties_NullPointLat();
-	// Считаем масштабы
-	MapStepLon = GetMapProperties_MapStepLon();
-	MapStepLat = GetMapProperties_MapStepLat();
-	// Узнаем количество узловых точек по долготе и широте
-	LonCount = GetMapProperties_LonCount();
-	LatCount = GetMapProperties_LatCount();
 
-	// Сделаем перенос координат в положительную полуплоскость для удобного сравнения
-	nav_transform(&NullPoint); // Нуль точку
-	nav_transform(&ThisPoint); // Текущая геолокация
+/*********************************************************************************************
+	area - Вычисление площади треугольника по 3м точкам
+	Параметры:
+				a, b, c точки типа point с координатами
+*********************************************************************************************/
+static double area(point a, point b, point c)
+{
+	double res;
+	res = ((a.lon - c.lon) * (b.lat - c.lat) + (b.lon - c.lon) * (c.lat - a.lat));
+	// Берём модуль
+	res = fabs(res);
 
-	if (ThisPoint.lon < NullPoint.lon || ThisPoint.lon >(NullPoint.lon + ((LonCount - 1) * MapStepLon)))
+	return res;
+}
+
+
+/**********************************************************************************************
+	TrianglePos - Определение принадлежности точки loc, треугольнику с вершинами
+	a,b,c.
+	Параметры:
+				a,b,C - Вершины треугольника
+				loc - координаты точки, принадлежность которой определяем
+	Возвращает: 0 - Не принадлежит
+				1 - Принадлежит
+***********************************************************************************************/
+static char TrianglePos(point a, point b, point c, point loc)
+{
+	double abc = area(a, b, c);
+	double abd = area(a, b, loc);
+	double adc = area(a, loc, c);
+	double bdc = area(b, loc, c);
+	double sum, eps;
+
+	sum = abd + adc + bdc;
+	eps = (abc / 100.0) * 0.0000000001;
+	//if (abc == abd + adc + bdc)
+	if (fabs(abd + adc + bdc - abc) < eps)
+		return 1;
+	else
+		return 0;
+}
+
+
+/************************************************************************************************
+	HeightFromPlane - Построение поверхности по трём точкам и вычисление высоты
+	в точке с координатами loc (метод триангуляции).
+	Параметры:
+				a,b,c - координаты точек, по которым строим поверхность
+				loc - указатель на координаты точки, высоту в которой нужно узнать
+	Возвращает:
+				loc - через указатель заполняется поле loc.alt, и вся
+				структура возвращается
+************************************************************************************************/
+static void HeightFromPlane(point a, point b, point c, point* loc)
+{
+	double matr[9];                   // Матрица для вычисления уравнения плоскости
+	double delta1, delta2, delta3;    // Миноры матрицы
+
+	/* Заполняем матрицу
+	|x-x1   x2-x1   x3-x1|     |matr[0] matr[1] matr[2]|
+	|y-y1   y2-y1   y3-y1|  =  |matr[3] matr[4] matr[5]|
+	|z-z1   z2-z1   z3-z1|     |matr[6] matr[7] matr[8]|  	*/
+
+	matr[0] = loc->lon - a.lon;  // x-x1
+	matr[1] = b.lon - a.lon;     // x2-x1
+	matr[2] = c.lon - a.lon;     // x3-x1
+	matr[3] = loc->lat - a.lat;  // y-y1
+	matr[4] = b.lat - a.lat;     // y2-y1
+	matr[5] = c.lat - a.lat;     // y3-y1
+	matr[6] = 0;                 // z-z1 (не сипользуем, так как сразу выразим высоту ниже)
+	matr[7] = b.alt - a.alt;     // z2-z1
+	matr[8] = c.alt - a.alt;     // z3-z1
+
+	// Считаем миноры матрицы
+	delta1 = matr[4] * matr[8] - matr[5] * matr[7];
+	delta2 = matr[1] * matr[8] - matr[2] * matr[7];
+	delta3 = matr[1] * matr[5] - matr[2] * matr[4];
+
+	/* Уравнение плоскости находится из определителя матрицы, то есть
+	(x-x1)*delta1 - (y-y1)*delta2 + (z-z1)*delta3 = 0 ,
+	но мы уравнение прямой искать не будем, вместо этого выразим z, а вместо x и y подставим координаты loc.lon и loc.lat соответсвенно.
+	Тогда получим : */
+	loc->alt = (matr[3] * delta2 - matr[0] * delta1) / delta3 + a.alt;
+	// Результат записываем сразу в структуру
+}
+
+
+/*********************************************************************************************************************************************
+	MapHeight - Определение высоты рельефа в точке location, по 4 ближайшим вершинам сетки
+	Параметры:
+				left_lower   - Левая нижняя вершина квадрата (наименьшие координаты по долготе и широте среди вершин)
+				left_upper   - Левая верхняя вершина квадрата
+				right_lower  - Правая нижняя вершина квадрата
+				right_upper  - Правая верхняя вершина квадрата (наибольшие координаты по долготе и широте среди вершин)
+				location     - Точка высоту рельефа в которой необходимо определить
+	Возвращает:
+				Округленную по ближайшего целого высоту в точке location
+				либо
+				MAP_NO_SOLUTION - если ошибка в аргументах, либо точка location вне квадрата
+
+	Примечание: Порядок вершин крайне важен, иначе вернёт ошибку
+*********************************************************************************************************************************************/
+static short MapHeight(point left_lower, point left_upper, point right_lower, point right_upper, point location)
+{
+	point A, B, C, D;
+	point LOC;
+
+	LOC.lon = location.lon;
+	LOC.lat = location.lat;
+	LOC.alt = 0;
+
+	// Фиксируем точки нашего квадрата 
+	A = left_upper;
+	B = right_upper;
+	C = left_lower;
+	D = right_lower;
+
+	// Контроль входных параметров
+	// Точка С должна быть в левом нижнем углу, поэтому не должно быть точек с меньшей долготой и меньшей широтой, чем у С
+	if ((C.lon > A.lon) || (C.lon > B.lon) || (C.lon > D.lon) || (C.lat > A.lat) || (C.lat > B.lat) || (C.lat > D.lat))
+		return MAP_NO_SOLUTION; // Ошибка возвращаем некорректное число
+	// Точка A должна быть в левом верхнем углу, поэтому не должно быть точек с меньшей долготой и большей широтой, чем у А
+	if ((A.lon > C.lon) || (A.lon > B.lon) || (A.lon > D.lon) || (A.lat < C.lat) || (A.lat < B.lat) || (A.lat < D.lat))
+		return MAP_NO_SOLUTION; // Ошибка возвращаем некорректное число
+	// Точка B должна быть в правом верхнем углу, поэтому не должно быть точек с большей долготой и большей широтой, чем у B
+	if ((B.lon < A.lon) || (B.lon < C.lon) || (B.lon < D.lon) || (B.lat < A.lat) || (B.lat < C.lat) || (B.lat < D.lat))
+		return MAP_NO_SOLUTION; // Ошибка возвращаем некорректное число
+	/* Точку D можно не проверять */
+
+	// Проверим принадлежность точки location треугольнику ABC
+	if (TrianglePos(A, B, C, LOC))
 	{
-		// Не попадает, но возможно она 
-		ThisPoint.lon += 360.0;
-		if (ThisPoint.lon < NullPoint.lon || ThisPoint.lon >(NullPoint.lon + ((LonCount - 1) * MapStepLon)))
-			return MAP_NOT_AVAILABLE; // Данная точка находится за пределами карты - карта недоступна в этой точке
+		HeightFromPlane(A, B, C, &LOC);
+		return (unsigned short)(LOC.alt + 0.5);
 	}
-	if (ThisPoint.lat < NullPoint.lat || ThisPoint.lat >(NullPoint.lat + ((LatCount - 1) * MapStepLat)))
-		return MAP_NOT_AVAILABLE; // Данная точка находится за пределами карты - карта недоступна в этой точке
-
-	return MAP_AVAILABLE; // Данная точка находится в пределах карты - карта доступна в этой точке
-
-
+	// Тогда точка location должна принадлежность треугольнику BCD
+	else if (TrianglePos(C, B, D, LOC))
+	{
+		HeightFromPlane(C, B, D, &LOC);
+		return (unsigned short)(LOC.alt + 0.5);
+	}
+	// Странно, точка не приналежит ни одному из треугольников - верну ошибку
+	return MAP_NO_SOLUTION;;
 }
