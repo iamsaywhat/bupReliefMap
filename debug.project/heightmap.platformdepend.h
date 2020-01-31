@@ -47,8 +47,8 @@ double getTouchdownLongitude(void);
 double getTouchdownLatitude(void);
 
 /****************************************************************************
-  Узнать высоту в узловой точке с индексами (latitudeIndex, longitudeIndex)
+  Узнать высоту в узловой точке с индексами (longitudeIndex, latitudeIndex)
 ****************************************************************************/
-short getAltitudeOnJunctionPoint(unsigned int latitudeIndex, unsigned int longitudeIndex);
+short getAltitudeOnJunctionPoint(unsigned int longitudeIndex, unsigned int latitudeIndex);
 
 #endif

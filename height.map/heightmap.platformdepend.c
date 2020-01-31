@@ -6,7 +6,6 @@
 ***********************************************/
 double getLongitudeGridStep(void)
 {
-
 }
 
 /***********************************************
@@ -14,7 +13,6 @@ double getLongitudeGridStep(void)
 ***********************************************/
 double getLatitudeGridStep(void)
 {
-
 }
 
 /***********************************************
@@ -22,7 +20,6 @@ double getLatitudeGridStep(void)
 ***********************************************/
 double getBottomLeftLongitude(void)
 {
-
 }
 
 /***********************************************
@@ -30,7 +27,6 @@ double getBottomLeftLongitude(void)
 ***********************************************/
 double getBottomLeftLatitude(void)
 {
-
 }
 
 /***********************************************
@@ -38,7 +34,6 @@ double getBottomLeftLatitude(void)
 ***********************************************/
 short getNumberOfLongitude(void)
 {
-
 }
 
 /***********************************************
@@ -46,7 +41,6 @@ short getNumberOfLongitude(void)
 ***********************************************/
 short getNumberOfLatitude(void)
 {
-
 }
 
 /***********************************************
@@ -54,7 +48,6 @@ short getNumberOfLatitude(void)
 ***********************************************/
 double getTouchdownLongitude(void)
 {
-
 }
 
 /***********************************************
@@ -62,13 +55,11 @@ double getTouchdownLongitude(void)
 ***********************************************/
 double getTouchdownLatitude(void)
 {
-
 }
 
 /****************************************************************************
-  Узнать высоту в узловой точке с индексами (latitudeIndex, longitudeIndex)
+  Узнать высоту в узловой точке с индексами (longitudeIndex, latitudeIndex)
 ****************************************************************************/
-short getAltitudeOnJunctionPoint(unsigned int latitudeIndex, unsigned int longitudeIndex)
+short getAltitudeOnJunctionPoint(unsigned int longitudeIndex, unsigned int latitudeIndex)
 {
-
 }

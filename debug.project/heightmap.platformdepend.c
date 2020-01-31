@@ -70,9 +70,9 @@ double getTouchdownLatitude(void)
 }
 
 /****************************************************************************
-  Узнать высоту в узловой точке с индексами (latitudeIndex, longitudeIndex)
+  Узнать высоту в узловой точке с индексами (longitudeIndex, latitudeIndex)
 ****************************************************************************/
-short getAltitudeOnJunctionPoint(unsigned int latitudeIndex, unsigned int longitudeIndex)
+short getAltitudeOnJunctionPoint(unsigned int longitudeIndex, unsigned int latitudeIndex)
 {
 	// Формула дл¤ расчета адреса чтени¤ из пам¤ти 54 + 800*(400 - 1 - j) + 2*i, 
 	// где 800 - размер пакета высот, количество точек по широте, 54 размер информационного пакета лежащего перед картой в пам¤ти
